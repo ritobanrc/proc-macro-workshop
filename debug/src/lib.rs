@@ -31,6 +31,15 @@ fn is_phantom_data_of(field: &syn::Field, type_param: &syn::Ident) -> bool {
     false
 }
 
+fn associated_type_used(field: &syn::Field, type_param: &syn::Ident) -> bool {
+    if let syn::Type::Path(syn::TypePath {
+        path: syn::Path { ref segments, .. },
+        ..
+    }) = field.ty
+    {}
+    false
+}
+
 #[proc_macro_derive(CustomDebug, attributes(debug))]
 pub fn derive(input: TokenStream) -> TokenStream {
     // Setup
