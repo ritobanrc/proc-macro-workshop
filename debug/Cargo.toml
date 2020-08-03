@@ -12,8 +12,14 @@ proc-macro = true
 name = "tests"
 path = "tests/progress.rs"
 
+[[test]]
+name = "current"
+path = "tests/04-type-parameter.rs"
+
 [dev-dependencies]
 trybuild = { version = "1.0", features = ["diff"] }
 
 [dependencies]
 # TODO
+syn = "1.0"
+quote = "1.0"
