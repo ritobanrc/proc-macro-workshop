@@ -41,8 +41,24 @@ pub fn derive(input: TokenStream) -> TokenStream {
         }
     });
 
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+
+    let empty_where = syn::WhereClause {
+        where_token: syn::Token![where](proc_macro2::Span::call_site()),
+        predicates: syn::punctuated::Punctuated::new(),
+    };
+
+    let mut where_clause = where_clause.unwrap_or(&empty_where).to_owned();
+
+    for param in input.generics.type_params() {
+        let ident = &param.ident;
+        where_clause
+            .predicates
+            .push_value(syn::parse_quote!( #ident: std::fmt::Debug ))
+    }
+
     (quote::quote! {
-        impl std::fmt::Debug for #type_name {
+        impl #impl_generics std::fmt::Debug for #type_name #ty_generics #where_clause {
             fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
                 fmt.debug_struct(stringify!(#type_name))
                     #( .field(stringify!(#field_names), #field_values) )*
