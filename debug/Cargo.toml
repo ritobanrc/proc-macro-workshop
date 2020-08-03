@@ -14,13 +14,13 @@ path = "tests/progress.rs"
 
 [[test]]
 name = "current"
-path = "tests/04-type-parameter.rs"
+path = "tests/05-phantom-data.rs"
 
 [dev-dependencies]
 trybuild = { version = "1.0", features = ["diff"] }
 
 [dependencies]
 # TODO
-syn = "1.0"
+syn = { version = "1.0", features = ["extra-traits"] }
 quote = "1.0"
 proc-macro2 = "1.0"

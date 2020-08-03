@@ -2,10 +2,41 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 
+fn is_phantom_data_of(field: &syn::Field, type_param: &syn::Ident) -> bool {
+    if let syn::Type::Path(syn::TypePath {
+        path: syn::Path { ref segments, .. },
+        ..
+    }) = field.ty
+    {
+        let syn::PathSegment { ident, arguments } = segments.last().unwrap();
+
+        if ident != "PhantomData" {
+            return false;
+        }
+
+        if let syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
+            args,
+            ..
+        }) = arguments
+        {
+            if let syn::GenericArgument::Type(syn::Type::Path(type_path)) =
+                args.iter().next().unwrap()
+            {
+                let ty = type_path.path.segments.iter().next().unwrap();
+                return ty.ident == *type_param;
+            }
+        }
+    }
+
+    false
+}
+
 #[proc_macro_derive(CustomDebug, attributes(debug))]
 pub fn derive(input: TokenStream) -> TokenStream {
+    // Setup
     let input: syn::DeriveInput = syn::parse(input).unwrap();
 
+    // get the fields
     let type_name = input.ident;
     let fields = if let syn::Data::Struct(data_struct) = input.data {
         data_struct.fields
@@ -15,6 +46,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
             .into();
     };
 
+    // prepare the fields for quoting
     let field_names = fields.iter().filter_map(|f| f.ident.as_ref());
     let field_values = fields.iter().filter_map(|f| {
         let field_name = f.ident.as_ref()?;
@@ -41,6 +73,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
         }
     });
 
+    // handle generics
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let empty_where = syn::WhereClause {
@@ -50,11 +83,17 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
     let mut where_clause = where_clause.unwrap_or(&empty_where).to_owned();
 
-    for param in input.generics.type_params() {
-        let ident = &param.ident;
+    'outer: for param in input.generics.type_params() {
+        let param_ident = &param.ident;
+
+        for field in fields.iter() {
+            if is_phantom_data_of(field, param_ident) {
+                continue 'outer;
+            }
+        }
         where_clause
             .predicates
-            .push_value(syn::parse_quote!( #ident: std::fmt::Debug ))
+            .push_value(syn::parse_quote!( #param_ident: std::fmt::Debug ));
     }
 
     (quote::quote! {
